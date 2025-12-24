@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import {  Jost } from "next/font/google";
+import { Jost } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-
+import { QueryProvider } from "./context/query-provider";
 
 const jostSans = Jost({
-  weight: ["100","200","300", "400","500","600", "700", "800","900"],
-})
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+});
 
 export const metadata: Metadata = {
   title: "XDesign - AI Mobile Design Agent",
@@ -21,10 +21,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${jostSans.className} antialiased`}
-      >
-        <ThemeProvider
+      <body className={`${jostSans.className} antialiased`}>
+        <QueryProvider>
+          <ThemeProvider
             attribute="class"
             defaultTheme="system"
             enableSystem
@@ -33,6 +32,7 @@ export default function RootLayout({
             {children}
             <Toaster richColors position="bottom-center" />
           </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   );
