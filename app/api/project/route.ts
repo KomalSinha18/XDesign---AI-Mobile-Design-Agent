@@ -2,6 +2,7 @@ import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { generateProjectName } from "@/app/action/action";
+import { inngest } from "@/inngest/client";
 
 export async function GET(request: Request) {
   try {
@@ -39,31 +40,118 @@ export async function POST(request: Request) {
     const session = await getKindeServerSession();
     const user = await session.getUser();
 
-    if (!user) throw new Error("Unauthorized");
-    if (!prompt) throw new Error("Missing Prompt");
+    if (!user) {
+      return NextResponse.json(
+        {
+          error: "Unauthorized - Please log in to create a project",
+        },
+        { status: 401 }
+      );
+    }
+
+    if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0) {
+      return NextResponse.json(
+        {
+          error: "Missing or invalid prompt - Please provide a project description",
+        },
+        { status: 400 }
+      );
+    }
 
     const userId = user.id;
 
-    const projectName = await generateProjectName(prompt);
+    // Generate project name
+    let projectName: string;
+    try {
+      projectName = await generateProjectName(prompt);
+    } catch (error) {
+      console.error("Error generating project name:", error);
+      // Fallback to a default name if generation fails
+      projectName = "Untitled Project";
+    }
 
-    const project = await prisma.project.create({
-      data: {
-        userId,
-        name: projectName,
-      },
-    });
+    // Create project in database
+    let project;
+    try {
+      project = await prisma.project.create({
+        data: {
+          userId,
+          name: projectName,
+        },
+      });
+    } catch (error: any) {
+      console.error("Database error creating project:", error);
+      
+      // Check for specific Prisma errors
+      if (error.code === "P2002") {
+        return NextResponse.json(
+          {
+            error: "A project with this name already exists",
+          },
+          { status: 409 }
+        );
+      }
+      
+      if (error.message?.includes("connect") || error.message?.includes("connection")) {
+        return NextResponse.json(
+          {
+            error: "Database connection error - Please check your DATABASE_URL environment variable",
+          },
+          { status: 500 }
+        );
+      }
+
+      throw error; // Re-throw to be caught by outer catch
+    }
 
     //Trigger the Inngest
+    try {
+      await inngest.send({
+        name: "ui/generate.screens",
+        data: {
+          userId,
+          projectId: project.id,
+          prompt,
+        },
+      });
+    } catch (error) {
+      console.error("Error triggering Inngest:", error);
+      // Don't fail the request if Inngest fails - project is already created
+    }
 
     return NextResponse.json({
       success: true,
       data: project,
     });
-  } catch (error) {
-    console.log("Error occured ", error);
+  } catch (error: any) {
+    console.error("Error creating project:", error);
+    
+    // Handle specific error types
+    if (error.message === "Unauthorized") {
+      return NextResponse.json(
+        {
+          error: "Unauthorized - Please log in to create a project",
+        },
+        { status: 401 }
+      );
+    }
+
+    if (error.message === "Missing Prompt") {
+      return NextResponse.json(
+        {
+          error: "Missing prompt - Please provide a project description",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Generic error response with more details in development
     return NextResponse.json(
       {
         error: "Failed to create project",
+        ...(process.env.NODE_ENV === "development" && {
+          details: error.message || String(error),
+        }),
       },
       { status: 500 }
     );

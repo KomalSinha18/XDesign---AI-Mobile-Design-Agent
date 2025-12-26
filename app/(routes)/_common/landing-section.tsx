@@ -4,12 +4,12 @@ import { formatDistanceToNow } from "date-fns";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import PromptInput from "@/components/prompt-input";
 import Header from "./header";
-import { useCreateProject, useGetProjects } from "@/features/use-project";
+import { useCreateProject, useGetProjects, useDeleteProject } from "@/features/use-project";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { Spinner } from "@/components/ui/spinner";
 import { ProjectType } from "@/types/project";
 import { useRouter } from "next/navigation";
-import { FolderOpenDotIcon } from "lucide-react";
+import { FolderOpenDotIcon, Trash2 } from "lucide-react";
 
 
 const LandingSection = () => {
@@ -180,6 +180,7 @@ const LandingSection = () => {
 };
 const ProjectCard = memo(({ project }: { project: ProjectType }) => {
   const router = useRouter();
+  const { mutate: deleteProject, isPending: isDeleting } = useDeleteProject();
   const createdAtDate = new Date(project.createdAt);
   const timeAgo = formatDistanceToNow(createdAtDate, { addSuffix: true });
   const thumbnail = project.thumbnail || null;
@@ -188,14 +189,33 @@ const ProjectCard = memo(({ project }: { project: ProjectType }) => {
     router.push(`/project/${project.id}`);
   };
 
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the card's onClick
+    if (confirm(`Are you sure you want to delete "${project.name}"?`)) {
+      deleteProject(project.id);
+    }
+  };
+
   return (
     <div
       role="button"
       className="w-full flex flex-col border rounded-xl cursor-pointer
-    hover:shadow-md overflow-hidden
+    hover:shadow-md overflow-hidden relative
     "
       onClick={onRoute}
     >
+      {/* Delete Button */}
+      <button
+        onClick={handleDelete}
+        disabled={isDeleting}
+        className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-background/80 backdrop-blur-sm 
+        hover:bg-destructive/10 text-muted-foreground hover:text-destructive 
+        transition-colors disabled:opacity-50"
+        title="Delete project"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
+
       <div
         className="h-40 bg-[#eee] relative overflow-hidden
         flex items-center justify-center
