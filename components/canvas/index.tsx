@@ -236,6 +236,7 @@ const Canvas = ({
                           }}
                           toolMode={toolMode}
                           theme_style={theme?.style}
+                          projectId={projectId}
                           onOpenHtmlDialog={onOpenHtmlDialog}
                         />
                       );
