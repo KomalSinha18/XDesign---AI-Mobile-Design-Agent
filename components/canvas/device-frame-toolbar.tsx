@@ -11,9 +11,13 @@ type PropsType = {
   isSelected?: boolean;
   disabled?: boolean;
   isDownloading: boolean;
+  isRegenerating?: boolean;
+  isDeleting?: boolean;
   scale?: number;
   onOpenHtmlDialog: () => void;
   onDownloadPng?: () => void;
+  onRegenerate?: (prompt: string) => void;
+  onDeleteFrame?: () => void;
 };
 const DeviceFrameToolbar = ({
   title,
@@ -21,8 +25,12 @@ const DeviceFrameToolbar = ({
   disabled,
   scale = 1.7,
   isDownloading,
+  isRegenerating,
+  isDeleting,
   onOpenHtmlDialog,
   onDownloadPng,
+  onRegenerate,
+  onDeleteFrame,
 }: PropsType) => {
   return (
     <div
