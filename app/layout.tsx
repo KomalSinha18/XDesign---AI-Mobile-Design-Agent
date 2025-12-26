@@ -12,6 +12,11 @@ const jostSans = Jost({
 export const metadata: Metadata = {
   title: "XDesign - AI Mobile Design Agent",
   description: "Generate mobile app designs with AI-powered assistance.",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
