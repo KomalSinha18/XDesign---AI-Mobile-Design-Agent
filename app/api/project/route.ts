@@ -106,7 +106,7 @@ export async function POST(request: Request) {
 
     //Trigger the Inngest
     try {
-      await inngest.send({
+      const eventResult = await inngest.send({
         name: "ui/generate.screens",
         data: {
           userId,
@@ -114,9 +114,22 @@ export async function POST(request: Request) {
           prompt,
         },
       });
-    } catch (error) {
-      console.error("Error triggering Inngest:", error);
+      console.log("Inngest event sent successfully:", eventResult);
+    } catch (error: any) {
+      console.error("Error triggering Inngest:", {
+        message: error?.message,
+        stack: error?.stack,
+        cause: error?.cause,
+      });
       // Don't fail the request if Inngest fails - project is already created
+      // But log it for debugging
+      if (process.env.NODE_ENV === "production") {
+        console.error("Inngest configuration check:", {
+          hasInngestEventKey: !!process.env.INNGEST_EVENT_KEY,
+          hasInngestSigningKey: !!process.env.INNGEST_SIGNING_KEY,
+          inngestBaseUrl: process.env.INNGEST_BASE_URL,
+        });
+      }
     }
 
     return NextResponse.json({

@@ -51,21 +51,21 @@ export const generateScreens = inngest.createFunction(
       userId,
       projectId,
       prompt,
-
       frames,
       theme: existingTheme,
     } = event.data;
     const CHANNEL = `user:${userId}`;
     const isExistingGeneration = Array.isArray(frames) && frames.length > 0;
 
-    await publish({
-      channel: CHANNEL,
-      topic: "generation.start",
-      data: {
-        status: "running",
-        projectId: projectId,
-      },
-    });
+    try {
+      await publish({
+        channel: CHANNEL,
+        topic: "generation.start",
+        data: {
+          status: "running",
+          projectId: projectId,
+        },
+      });
 
     //Analyze or plan
     const analysis = await step.run("analyze-and-plan-screens", async () => {
@@ -352,13 +352,34 @@ export const generateScreens = inngest.createFunction(
       });
     }
 
-    await publish({
-      channel: CHANNEL,
-      topic: "generation.complete",
-      data: {
-        status: "completed",
-        projectId: projectId,
-      },
-    });
+      await publish({
+        channel: CHANNEL,
+        topic: "generation.complete",
+        data: {
+          status: "completed",
+          projectId: projectId,
+        },
+      });
+    } catch (error: any) {
+      console.error("Error in generateScreens function:", error);
+      
+      // Always publish completion event, even on error
+      try {
+        await publish({
+          channel: CHANNEL,
+          topic: "generation.complete",
+          data: {
+            status: "error",
+            projectId: projectId,
+            error: error?.message || "Failed to generate screens",
+          },
+        });
+      } catch (publishError) {
+        console.error("Failed to publish error event:", publishError);
+      }
+      
+      // Re-throw to mark function as failed in Inngest
+      throw error;
+    }
   }
 );
