@@ -6,6 +6,7 @@ import React from "react";
 import Header from "./_common/header";
 import { CanvasProvider } from "@/context/canvas-context";
 import Canvas from "@/components/canvas";
+import { AxiosError } from "axios";
 
 const page = () => {
   const params = useParams();
@@ -34,6 +35,19 @@ const page = () => {
 
   // Show error state only after query has completed and failed
   if (isError || (!isPending && !project)) {
+    // Type guard to check if error is an AxiosError
+    const isAxiosError = (err: unknown): err is AxiosError => {
+      return (
+        typeof err === "object" &&
+        err !== null &&
+        "response" in err &&
+        typeof (err as AxiosError).response === "object"
+      );
+    };
+
+    const errorStatus = isAxiosError(error) ? error.response?.status : undefined;
+    const isNotFound = errorStatus === 404 || !project;
+
     return (
       <div
         className="relative h-screen w-full
@@ -43,9 +57,7 @@ const page = () => {
         <Header projectName={undefined} />
         <div className="flex flex-1 items-center justify-center">
           <div className="text-destructive">
-            {error?.response?.status === 404 || !project
-              ? "Project not found"
-              : "Failed to load project"}
+            {isNotFound ? "Project not found" : "Failed to load project"}
           </div>
         </div>
       </div>
