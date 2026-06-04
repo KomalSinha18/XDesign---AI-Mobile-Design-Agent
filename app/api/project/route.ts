@@ -9,7 +9,14 @@ export async function GET(request: Request) {
     const session = await getKindeServerSession();
     const user = await session.getUser();
 
-    if (!user) throw new Error("Unauthorized");
+    if (!user) {
+      return NextResponse.json(
+        {
+          error: "Unauthorized - Please log in to view your projects",
+        },
+        { status: 401 }
+      );
+    }
 
     const projects = await prisma.project.findMany({
       where: {
@@ -23,11 +30,14 @@ export async function GET(request: Request) {
       success: true,
       data: projects,
     });
-  } catch (error) {
-    console.log("Error occured ", error);
+  } catch (error: any) {
+    console.error("Error fetching projects:", error);
     return NextResponse.json(
       {
         error: "Failed to fetch projects",
+        ...(process.env.NODE_ENV === "development" && {
+          details: error?.message || String(error),
+        }),
       },
       { status: 500 }
     );
